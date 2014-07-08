@@ -100,8 +100,6 @@ static ngx_ext_logman_link_t* ngx_ext_logman_net_init(ngx_str_t* ip,ngx_str_t*po
        link->sock = 0;
     }
 
-    printf("net init with ip %s port %d confd %d \n",link->ip,link->port,conn_fd);
-
     return link;
 }
 
@@ -109,25 +107,22 @@ static ngx_uint_t s_cur_link_index = 0;
 static ngx_ext_logman_link_t* ngx_ext_logman_net_getlink(ngx_http_request_t *r,ngx_array_t*ipport_arr){
     /*检测是否已经初始化过logman的连接信息*/
     if(s_log_link ==NULL){
-        printf("s_log_link is null \n");
         s_log_link = ngx_array_create(ngx_cycle->pool, LOG_MAX_LINK_NUM,
                                           sizeof(ngx_ext_logman_link_t));
         ngx_uint_t i = 0;
         for(;i < ipport_arr->nelts;i++){
             ngx_keyval_t* pkv               = (ngx_keyval_t* )(ipport_arr->elts)+i;
             ngx_ext_logman_net_init(&pkv->key,&pkv->value);
-            ngx_log_error(NGX_LOG_NOTICE,r->connection->log,0,"=============================== %s %s \n",&pkv->key.data,&pkv->value.data);
+            ngx_log_error(NGX_LOG_NOTICE,r->connection->log,0,"logman connect param > ip %V port %V \n",&pkv->key,&pkv->value);
         }
     }
     ngx_ext_logman_link_t*link = NULL;
     ngx_uint_t loop =0;
-          printf("s_cur_link_index %d %d \n",(int)s_cur_link_index,(int)(s_log_link->nelts));
     while(loop++ <= NGX_EXT_LOGMAN_LINK_TRY_TIMES){
         ++s_cur_link_index;
         if(s_cur_link_index >= s_log_link->nelts){
             s_cur_link_index = 0;
         }
-        printf("s_cur_link_index %d %d \n",(int)s_cur_link_index,(int)(s_log_link->nelts));
         link = (ngx_ext_logman_link_t*)(s_log_link->elts)+s_cur_link_index;
         if(link && link->sock > 0){
             break;
@@ -144,16 +139,12 @@ void ngx_ext_logman_net_report(ngx_http_request_t *r,ngx_array_t*ipport_arr,char
     if(link == NULL){
         return;
     }
-    printf("link %p sock %d \n",link,link->sock);
     
     char buffer[1024];
 	snprintf(buffer,1024,"{\"mark\":\"log\",\"type\":\"log\",\"info\":{\"source\":\"%s\",\"level\":\"STAT\",\"type\":\"%s\",\"content\":\"%s\",\"expand\":\"%s\"}}","nginx","s",msg,"");
     
     /*这里不做错误检测*/
-    int n = send(link->sock,buffer,strlen(buffer)+1,0);
-    
-    printf("link %p sock %d buffer %s sendn %d \n",link,link->sock,buffer,n);
-
+    send(link->sock,buffer,strlen(buffer)+1,0);
     return;
 }
 
