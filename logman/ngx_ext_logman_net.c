@@ -105,6 +105,7 @@ static ngx_ext_logman_link_t* ngx_ext_logman_net_init(ngx_str_t* ip,ngx_str_t*po
 
 static ngx_uint_t s_cur_link_index = 0;
 static ngx_ext_logman_link_t* ngx_ext_logman_net_getlink(ngx_http_request_t *r,ngx_array_t*ipport_arr){
+    
     /*检测是否已经初始化过logman的连接信息*/
     if(s_log_link ==NULL){
         s_log_link = ngx_array_create(ngx_cycle->pool, LOG_MAX_LINK_NUM,

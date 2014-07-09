@@ -3,6 +3,8 @@
 #include <ngx_http.h>
 #include "ngx_ext_logman_net.h"
 
+static ngx_int_t ngx_ext_logman_init_process(ngx_cycle_t*);
+
 static void*
 ngx_ext_logman_create_loc_conf(ngx_conf_t *cf);
 
@@ -60,7 +62,7 @@ ngx_module_t  ngx_ext_logman_module =
     NGX_HTTP_MODULE,                       /* module type */
     NULL,                                  /* init master */
     NULL,                                  /* init module */
-    NULL,                                  /* init process */
+    ngx_ext_logman_init_process,                                  /* init process */
     NULL,                                  /* init thread */
     NULL,                                  /* exit thread */
     NULL,                                  /* exit process */
@@ -68,6 +70,12 @@ ngx_module_t  ngx_ext_logman_module =
     NGX_MODULE_V1_PADDING
 };
 static void ngx_ext_logman_sendto_logcenter(ngx_http_request_t*,ngx_array_t*ipport_arr,ngx_str_t *args);
+
+static ngx_int_t ngx_ext_logman_init_process(ngx_cycle_t*cycle){
+    ngx_log_error(NGX_LOG_NOTICE,cycle->log,0,"ngx_ext_logman_init_process ");
+    ngx_ext_logman_net_initenv();
+    return NGX_OK;
+}
 
 static void* ngx_ext_logman_create_loc_conf(ngx_conf_t *cf){
     ngx_ext_logman_conf_t  *mycf;
@@ -79,9 +87,6 @@ static void* ngx_ext_logman_create_loc_conf(ngx_conf_t *cf){
     }
 
     mycf->mylog_ipport = NULL;
-
-    ngx_ext_logman_net_initenv();
-
     return mycf;
 }
 
@@ -110,10 +115,12 @@ static ngx_int_t ngx_ext_logman_handler(ngx_http_request_t *r){
     {
         return NGX_HTTP_NOT_ALLOWED;
     }    
-    printf("r %p r->loc_conf %p \n",r,r->loc_conf);
-    ngx_ext_logman_sendto_logcenter(r,((ngx_ext_logman_conf_t*)(r->loc_conf[ngx_ext_logman_module.ctx_index]))->mylog_ipport,&(r->args));
+    
     //仅需记录日志
-    return NGX_HTTP_NOT_FOUND;
+    ngx_ext_logman_sendto_logcenter(r,((ngx_ext_logman_conf_t*)(r->loc_conf[ngx_ext_logman_module.ctx_index]))->mylog_ipport,&(r->args));
+    
+    ngx_http_finalize_request(r, NGX_HTTP_NO_CONTENT);
+    return NGX_OK;
 }
 
 
